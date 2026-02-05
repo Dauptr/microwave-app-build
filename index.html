@@ -3,89 +3,407 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AppBuilder Microwave 3000</title>
-    <link rel="stylesheet" href="styles.css">
-    <!-- JSZip Library for creating the downloadable app package -->
+    <title>App-Matic 3000: Pro Edition</title>
+    <!-- Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    
+    <style>
+        /* --- GLOBAL LAYOUT --- */
+        :root { --primary: #6200ea; --bg: #1e1e1e; --panel: #252526; --text: #d4d4d4; }
+        body { margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); display: flex; height: 100vh; overflow: hidden; }
+        
+        /* --- LEFT PANEL: BUILDER --- */
+        .builder-panel {
+            width: 400px; background: var(--panel);
+            border-right: 1px solid #333;
+            display: flex; flex-direction: column;
+            overflow-y: auto; padding: 20px;
+        }
+
+        .section-title { 
+            color: var(--primary); font-weight: bold; margin-top: 20px; 
+            border-bottom: 1px solid #444; padding-bottom: 5px; text-transform: uppercase; font-size: 0.9rem;
+        }
+
+        .form-group { margin-bottom: 15px; }
+        label { display: block; font-size: 0.85rem; margin-bottom: 5px; color: #aaa; }
+        
+        input[type="text"], input[type="color"], select, textarea {
+            width: 100%; padding: 8px; border-radius: 4px;
+            border: 1px solid #444; background: #333; color: white;
+            box-sizing: border-box;
+        }
+        
+        textarea { height: 80px; font-family: monospace; font-size: 0.8rem; }
+
+        /* Feature Grid */
+        .feature-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .feature-card {
+            background: #333; border: 1px solid #444; padding: 10px;
+            border-radius: 6px; cursor: pointer; transition: 0.2s;
+            display: flex; align-items: center; gap: 8px; font-size: 0.85rem;
+        }
+        .feature-card:hover { border-color: var(--primary); }
+        .feature-card.active { background: rgba(98, 0, 234, 0.2); border-color: var(--primary); }
+        .feature-card input { margin: 0; }
+
+        /* Action Buttons */
+        .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
+        .btn {
+            padding: 12px; border: none; border-radius: 6px; font-weight: bold;
+            cursor: pointer; transition: 0.2s; color: white;
+        }
+        .btn-preview { background: #444; }
+        .btn-preview:hover { background: #555; }
+        .btn-build { background: var(--primary); grid-column: span 2; font-size: 1.1rem; }
+        .btn-build:hover { background: #7c4dff; }
+        .btn-download { background: #00e676; color: #000; margin-top: 10px; width: 100%; display: none; }
+        .btn-install { background: #ff1744; color: white; margin-top: 10px; width: 100%; display: none; }
+
+        /* --- RIGHT PANEL: PREVIEW CONSOLE --- */
+        .preview-console {
+            flex: 1; background: #121212;
+            display: flex; justify-content: center; align-items: center;
+            position: relative; padding: 20px;
+        }
+
+        /* The Phone Simulator */
+        .phone-frame {
+            width: 375px; height: 667px; background: #000; border-radius: 35px;
+            border: 10px solid #333; box-shadow: 0 0 50px rgba(0,0,0,0.8);
+            overflow: hidden; position: relative; display: flex; flex-direction: column;
+            transition: transform 0.3s ease;
+        }
+        
+        .phone-header { height: 30px; background: #000; display: flex; justify-content: center; align-items: center; }
+        .notch { width: 120px; height: 20px; background: #111; border-radius: 0 0 15px 15px; }
+        
+        .app-screen { flex: 1; background: white; overflow-y: auto; position: relative; }
+        .app-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9); color: white;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            z-index: 20; display: none;
+        }
+        
+        .loading-ring {
+            width: 50px; height: 50px; border: 4px solid rgba(255,255,255,0.3);
+            border-top: 4px solid var(--primary); border-radius: 50%;
+            animation: spin 1s linear infinite; margin-bottom: 20px;
+        }
+
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* --- TOGGLES --- */
+        .hidden { display: none !important; }
+        .show { display: flex !important; }
+    </style>
 </head>
 <body>
 
-    <div class="microwave-container">
-        <div class="brand">App-Matic 3000</div>
+    <!-- LEFT: BUILDER PANEL -->
+    <aside class="builder-panel">
+        <h2>⚙️ App Builder</h2>
+
+        <!-- 1. App Identity -->
+        <div class="section-title">Identity</div>
+        <div class="form-group">
+            <label>App Name</label>
+            <input type="text" id="appName" value="My Awesome App" oninput="updatePreview()">
+        </div>
         
-        <!-- Door / Window -->
-        <div class="door-frame">
-            <div class="window" id="mw-window">
-                <div class="plate">
-                    <div class="plate-content" id="plate-icon">📄</div>
-                </div>
+        <!-- 2. Custom Code Input -->
+        <div class="section-title">Custom Code (Index.html)</div>
+        <div class="form-group">
+            <label>Paste Custom HTML/CSS Snippet</label>
+            <textarea id="customCode" placeholder="<div class='banner'>Sale!</div>..." oninput="updatePreview()"></textarea>
+        </div>
 
-                <!-- CONFIGURATION OVERLAY -->
-                <div class="input-overlay" id="config-overlay">
-                    <h3>Configure App</h3>
-                    
-                    <div class="input-group">
-                        <label>App Name</label>
-                        <input type="text" id="cfg-name" value="MyCoolApp">
-                    </div>
-
-                    <div class="input-group">
-                        <label>Recipe (Type)</label>
-                        <select id="cfg-recipe">
-                            <option value="todo">📝 To-Do List (Dynamic)</option>
-                            <option value="feed">📰 News Feed (JSON)</option>
-                            <option value="info">ℹ️ Info Card (Static)</option>
-                        </select>
-                    </div>
-
-                    <div class="input-group">
-                        <label>Theme Color</label>
-                        <input type="color" id="cfg-color" value="#6200ea" style="height:35px;">
-                    </div>
-
-                    <div class="input-group">
-                        <label>Data (JSON - Optional)</label>
-                        <textarea id="cfg-data" rows="3" placeholder='[{"title":"Item 1"}]'></textarea>
-                        <small style="color:#aaa; font-size:0.7rem;">Used for Feed recipes</small>
-                    </div>
-
-                    <div class="features-group">
-                        <label><input type="checkbox" id="feat-storage" checked> Save Data (Storage)</label>
-                        <label><input type="checkbox" id="feat-pwa" checked> PWA Installer</label>
-                    </div>
-                </div>
-
-                <!-- FINISHED OVERLAY -->
-                <div class="input-overlay hidden" id="done-overlay">
-                    <h1 style="color:#4CAF50; font-size:3rem; margin:0;">DONE!</h1>
-                    <p>App compiled successfully.</p>
-                    <div class="download-actions">
-                        <button class="dl-btn" onclick="downloadZip()">📦 Install (.zip)</button>
-                        <button class="dl-btn" onclick="resetMicrowave()">🔄 Reset</button>
-                    </div>
-                </div>
+        <!-- 3. Features List -->
+        <div class="section-title">App Features</div>
+        <div class="feature-grid">
+            <div class="feature-card" onclick="toggleFeature(this, 'camera')">
+                <input type="checkbox" id="feat-camera"> 📷 Camera
+            </div>
+            <div class="feature-card" onclick="toggleFeature(this, 'gps')">
+                <input type="checkbox" id="feat-gps"> 📍 GPS/Maps
+            </div>
+            <div class="feature-card" onclick="toggleFeature(this, 'dark')">
+                <input type="checkbox" id="feat-dark"> 🌙 Dark Mode
+            </div>
+            <div class="feature-card" onclick="toggleFeature(this, 'offline')">
+                <input type="checkbox" id="feat-offline" checked> 💾 Offline PWA
+            </div>
+            <div class="feature-card" onclick="toggleFeature(this, 'share')">
+                <input type="checkbox" id="feat-share"> 🔗 Share Button
+            </div>
+            <div class="feature-card" onclick="toggleFeature(this, 'push')">
+                <input type="checkbox" id="feat-push"> 🔔 Notifications
             </div>
         </div>
 
-        <!-- Controls -->
-        <div class="controls">
-            <div class="led-panel">
-                <div class="display-text" id="display">00:00</div>
-                <div class="progress-bar" id="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
-                <div class="status-text" id="status-text">READY</div>
+        <!-- 4. Themes -->
+        <div class="section-title">Theme</div>
+        <div class="form-group">
+            <label>Primary Color</label>
+            <input type="color" id="themeColor" value="#6200ea" oninput="updatePreview()">
+        </div>
+        <div class="form-group">
+            <label>Font Style</label>
+            <select id="themeFont" onchange="updatePreview()">
+                <option value="sans-serif">Modern Sans</option>
+                <option value="serif">Classic Serif</option>
+                <option value="monospace">Tech Code</option>
+            </select>
+        </div>
+
+        <!-- 5. UI Controls -->
+        <div class="section-title">UI Controls</div>
+        <div class="form-group">
+            <label>Navigation Style</label>
+            <select id="navStyle" onchange="updatePreview()">
+                <option value="bottom">Bottom Tab Bar</option>
+                <option value="top">Top Header Menu</option>
+                <option value="floating">Floating Action Button</option>
+            </select>
+        </div>
+
+        <!-- 7. Output Suggestion -->
+        <div class="section-title">Output</div>
+        <div class="form-group">
+            <label>Filename</label>
+            <input type="text" id="fileName" value="my-app-v1">
+        </div>
+
+        <!-- ACTIONS -->
+        <div class="btn-group">
+            <button class="btn btn-preview" onclick="toggleConsole()">📱 Switch to Preview Console</button>
+            <button class="btn btn-build" onclick="buildApp()">🔥 BUILD APP</button>
+            
+            <!-- Hidden until built -->
+            <button class="btn btn-download" id="dlBtn" onclick="downloadApp()">📥 Download Source (.zip)</button>
+            <button class="btn btn-install" id="installBtn" onclick="simulateInstall()">🚀 Install Now</button>
+        </div>
+    </aside>
+
+    <!-- RIGHT: PREVIEW CONSOLE -->
+    <main class="preview-console" id="console-area">
+        <div class="phone-frame" id="phone-frame">
+            <div class="phone-header">
+                <div class="notch"></div>
+            </div>
+            
+            <div class="app-screen" id="app-screen">
+                <!-- App Content Injected Here -->
+                <div style="padding:20px; text-align:center; color:#ccc;">
+                    <h1>Preview Console</h1>
+                    <p>Click "Build App" to see your app here.</p>
+                </div>
             </div>
 
-            <div class="keypad">
-                <button class="btn" onclick="addTime(10)">10s</button>
-                <button class="btn" onclick="addTime(30)">30s</button>
-                <button class="btn" onclick="addTime(60)">60s</button>
-                <button class="btn btn-clear" onclick="resetMicrowave()">CANCEL</button>
-                <button class="btn btn-action btn-start" onclick="startCooking()">START</button>
+            <!-- Installation Simulator Overlay -->
+            <div class="app-overlay" id="install-overlay">
+                <div class="loading-ring"></div>
+                <h3 id="install-status">Installing...</h3>
             </div>
         </div>
+    </main>
+
+    <script>
+        // State
+        let isBuilt = false;
+        let generatedAppCode = "";
+        let generatedManifest = "";
+
+        // Toggle UI Checkbox Logic
+        function toggleFeature(card, id) {
+            const checkbox = card.querySelector('input');
+            checkbox.checked = !checkbox.checked;
+            if(checkbox.checked) card.classList.add('active');
+            else card.classList.remove('active');
+            updatePreview();
+        }
+
+        // 6. Toggle Console Visibility
+        function toggleConsole() {
+            const consoleArea = document.getElementById('console-area');
+            consoleArea.classList.toggle('hidden');
+        }
+
+        // Generate Preview Code
+        function updatePreview() {
+            if (!isBuilt) return; // Only update if we have built it initially
+            
+            // Simple DOM update for preview speed
+            const screen = document.getElementById('app-screen');
+            const config = getConfig();
+            
+            let html = `
+                <style>
+                    body { font-family: ${config.font}; background: ${config.dark ? '#121212' : '#f4f4f9'}; color: ${config.dark ? '#eee' : '#333'}; margin:0; padding-bottom: 60px; }
+                    .header { background: ${config.color}; color: white; padding: 20px; text-align: center; }
+                    .card { background: ${config.dark ? '#1e1e1e' : 'white'}; margin: 15px; padding: 15px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+                    .fab { position: absolute; bottom: 20px; right: 20px; width: 60px; height: 60px; background: ${config.color}; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 24px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+                    .nav { position: fixed; bottom: 0; left: 0; width: 100%; height: 60px; background: ${config.dark ? '#333' : 'white'}; display: flex; justify-content: space-around; align-items: center; border-top: 1px solid #ddd; }
+                </style>
+                <div class="header"><h1>${config.name}</h1></div>
+                
+                ${config.custom ? `<div class="card">${config.custom}</div>` : ''}
+                
+                <div class="card">
+                    <h3>Features Active:</h3>
+                    <ul>${config.features.join('<br>')}</ul>
+                </div>
+
+                <div class="card">
+                    <p>Generated App Preview.</p>
+                </div>
+            `;
+
+            if(config.nav === 'floating') html += `<div class="fab">+</div>`;
+            if(config.nav === 'bottom') html += `<div class="nav"><span>🏠</span><span>🔍</span><span>⚙️</span></div>`;
+
+            screen.innerHTML = html;
+        }
+
+        function getConfig() {
+            const features = [];
+            if(document.getElementById('feat-camera').checked) features.push("📷 Camera Access");
+            if(document.getElementById('feat-gps').checked) features.push("📍 Geolocation");
+            if(document.getElementById('feat-dark').checked) features.push("🌙 Dark Mode");
+            if(document.getElementById('feat-offline').checked) features.push("💾 Offline Capable");
+            
+            return {
+                name: document.getElementById('appName').value,
+                color: document.getElementById('themeColor').value,
+                font: document.getElementById('themeFont').value,
+                nav: document.getElementById('navStyle').value,
+                custom: document.getElementById('customCode').value,
+                features: features,
+                dark: document.getElementById('feat-dark').checked
+            };
+        }
+
+        // THE BUILD PROCESS
+        function buildApp() {
+            const config = getConfig();
+            const status = document.getElementById('install-status');
+            const overlay = document.getElementById('install-overlay');
+            
+            // Show "Building" animation
+            overlay.style.display = 'flex';
+            status.innerText = "Compiling Source...";
+            
+            setTimeout(() => {
+                status.innerText = "Optimizing Assets...";
+            }, 1000);
+
+            setTimeout(() => {
+                overlay.style.display = 'none';
+                isBuilt = true;
+                document.getElementById('dlBtn').style.display = 'block';
+                document.getElementById('installBtn').style.display = 'block';
+                
+                // Generate Real Code
+                generateRealSource(config);
+                updatePreview();
+                
+                alert("Build Successful! Check Preview Console.");
+            }, 2000);
+        }
+
+        function generateRealSource(cfg) {
+            // Create the full HTML string
+            const bodyContent = cfg.custom ? `<div class="custom-section">${cfg.custom}</div>` : '';
+            
+            generatedAppCode = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${cfg.name}</title>
+    <link rel="manifest" href="manifest.json">
+    <style>
+        body { font-family: ${cfg.font}; background: ${cfg.dark ? '#121212' : '#f4f4f9'}; color: ${cfg.dark ? '#eee' : '#333'}; margin:0; padding: 20px; padding-bottom: 80px; }
+        .header { background: ${cfg.color}; color: white; padding: 20px; margin: -20px -20px 20px -20px; text-align: center; border-bottom-left-radius: 15px; border-bottom-right-radius: 15px; }
+        .card { background: ${cfg.dark ? '#1e1e1e' : 'white'}; padding: 15px; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .nav { position: fixed; bottom: 0; left: 0; width: 100%; height: 60px; background: ${cfg.dark ? '#333' : 'white'}; display: flex; justify-content: space-around; align-items: center; border-top: 1px solid #ddd; }
+        .fab { position: fixed; bottom: 20px; right: 20px; width: 60px; height: 60px; background: ${cfg.color}; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 24px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); cursor: pointer; }
+        button { background: ${cfg.color}; color: white; border: none; padding: 10px 20px; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <div class="header"><h1>${cfg.name}</h1></div>
+    ${bodyContent}
+    <div class="card">
+        <h3>Welcome to your App!</h3>
+        <p>This app was generated by App-Matic 3000.</p>
+        ${cfg.features.includes('📍 Geolocation') ? '<button onclick="alert(\'GPS feature enabled\')">Get Location</button>' : ''}
     </div>
+    
+    ${cfg.nav === 'bottom' ? '<div class="nav"><span>Home</span><span>Menu</span></div>' : ''}
+    ${cfg.nav === 'floating' ? '<div class="fab">+</div>' : ''}
+    
+    <script>
+        console.log('App Loaded');
+        if ('serviceWorker' in navigator && ${document.getElementById('feat-offline').checked}) {
+            // Service Worker registration code would go here
+        }
+    <\/script>
+</body>
+</html>`;
 
-    <script src="app.js"></script>
+            // Manifest
+            generatedManifest = JSON.stringify({
+                name: cfg.name,
+                short_name: cfg.name,
+                start_url: "./index.html",
+                display: "standalone",
+                background_color: cfg.dark ? "#121212" : "#ffffff",
+                theme_color: cfg.color,
+                icons: [{"src": "https://via.placeholder.com/192", "sizes": "192x192", "type": "image/png"}]
+            });
+        }
+
+        // 8. Download
+        async function downloadApp() {
+            const zip = new JSZip();
+            zip.file("index.html", generatedAppCode);
+            if(document.getElementById('feat-offline').checked) {
+                zip.file("manifest.json", generatedManifest);
+            }
+            
+            const content = await zip.generateAsync({type:"blob"});
+            const name = document.getElementById('fileName').value || "app";
+            saveAs(content, name + ".zip");
+        }
+
+        // 9. Install Simulation
+        function simulateInstall() {
+            const status = document.getElementById('install-status');
+            const overlay = document.getElementById('install-overlay');
+            overlay.style.display = 'flex';
+            
+            status.innerText = "Installing App to Device...";
+            
+            setTimeout(() => {
+                status.innerText = "Adding to Home Screen...";
+            }, 1500);
+            
+            setTimeout(() => {
+                status.innerText = "Done!";
+                status.style.color = "#00e676";
+                setTimeout(() => {
+                    overlay.style.display = 'none';
+                    status.style.color = "white";
+                    alert("App 'Installed' (Simulated). On a real device, this would place an icon on your home screen.");
+                }, 1000);
+            }, 3000);
+        }
+
+        // Init
+        updatePreview();
+    </script>
 </body>
 </html>
