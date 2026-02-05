@@ -3,407 +3,426 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>App-Matic 3000: Pro Edition</title>
-    <!-- Libraries -->
+    <title>App-Matic 3000: Pro</title>
+    <!-- Libraries for Zipping -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
-    
+
     <style>
-        /* --- GLOBAL LAYOUT --- */
-        :root { --primary: #6200ea; --bg: #1e1e1e; --panel: #252526; --text: #d4d4d4; }
-        body { margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); display: flex; height: 100vh; overflow: hidden; }
-        
-        /* --- LEFT PANEL: BUILDER --- */
-        .builder-panel {
-            width: 400px; background: var(--panel);
-            border-right: 1px solid #333;
-            display: flex; flex-direction: column;
-            overflow-y: auto; padding: 20px;
+        :root {
+            --mw-body: #e0e0e0;
+            --mw-door: #222;
+            --mw-led: #3b0d0d;
+            --mw-led-on: #ff3300;
+            --bg-color: #2c3e50;
         }
+
+        body {
+            margin: 0; padding: 0;
+            background-color: var(--bg-color);
+            font-family: 'Segoe UI', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: #333;
+        }
+
+        /* --- MAIN LAYOUT --- */
+        .workspace {
+            display: flex;
+            gap: 40px;
+            align-items: center;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        /* --- 1. THE MICROWAVE (Visuals) --- */
+        .microwave-container {
+            width: 450px;
+            background: linear-gradient(135deg, #f5f5f5, #dcdcdc);
+            border-radius: 25px;
+            padding: 25px;
+            box-shadow: 
+                0 25px 60px rgba(0,0,0,0.6), 
+                inset 2px 2px 5px rgba(255,255,255,0.8),
+                inset -2px -2px 5px rgba(0,0,0,0.2);
+            position: relative;
+            z-index: 2;
+        }
+
+        .brand {
+            font-weight: 900; color: #555; font-style: italic;
+            font-size: 1.4rem; position: absolute; top: 25px; left: 25px;
+        }
+
+        /* Door Area */
+        .door-frame {
+            background: #222; padding: 12px; border-radius: 15px;
+            height: 320px; position: relative; box-shadow: inset 0 0 20px #000;
+        }
+
+        .window {
+            background: rgba(40, 40, 40, 0.9);
+            width: 100%; height: 100%; border-radius: 8px;
+            position: relative; overflow: hidden;
+            border: 2px solid #444; transition: background 0.3s;
+        }
+
+        .window.lit { background: rgba(80, 40, 20, 0.7); box-shadow: inset 0 0 60px rgba(255, 100, 0, 0.3); }
+
+        /* The Plate */
+        .plate {
+            width: 100px; height: 100px; background: #eee;
+            border-radius: 50%; border: 5px solid #ccc;
+            position: absolute; left: 50%; top: 50%;
+            transform: translate(-50%, -50%);
+            display: flex; justify-content: center; align-items: center;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+            z-index: 1;
+        }
+        .plate-content { font-size: 3rem; }
+        .spinning { animation: spin 0.8s linear infinite; }
+        @keyframes spin { 100% { transform: translate(-50%, -50%) rotate(360deg); } }
+
+        /* --- 2. CONFIG OVERLAY (Inputs inside the microwave) --- */
+        .input-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.95); z-index: 10;
+            display: flex; flex-direction: column; justify-content: flex-start;
+            align-items: center; padding: 20px; color: white;
+            overflow-y: auto; /* Scrollable if content is long */
+        }
+
+        /* Custom Scrollbar for overlay */
+        .input-overlay::-webkit-scrollbar { width: 6px; }
+        .input-overlay::-webkit-scrollbar-thumb { background: #555; border-radius: 3px; }
 
         .section-title { 
-            color: var(--primary); font-weight: bold; margin-top: 20px; 
-            border-bottom: 1px solid #444; padding-bottom: 5px; text-transform: uppercase; font-size: 0.9rem;
+            font-size: 0.8rem; text-transform: uppercase; color: var(--mw-led-on); 
+            width: 100%; text-align: left; border-bottom: 1px solid #444; margin-bottom: 10px; margin-top: 10px;
         }
 
-        .form-group { margin-bottom: 15px; }
-        label { display: block; font-size: 0.85rem; margin-bottom: 5px; color: #aaa; }
-        
-        input[type="text"], input[type="color"], select, textarea {
-            width: 100%; padding: 8px; border-radius: 4px;
-            border: 1px solid #444; background: #333; color: white;
-            box-sizing: border-box;
+        .form-row { width: 100%; margin-bottom: 8px; }
+        label { display: block; font-size: 0.7rem; color: #aaa; margin-bottom: 2px; }
+        input, select, textarea {
+            width: 100%; padding: 6px; border-radius: 4px; border: 1px solid #555;
+            background: #333; color: white; font-family: inherit; font-size: 0.8rem;
         }
-        
-        textarea { height: 80px; font-family: monospace; font-size: 0.8rem; }
+        textarea { height: 60px; resize: none; }
 
-        /* Feature Grid */
-        .feature-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .feature-card {
-            background: #333; border: 1px solid #444; padding: 10px;
-            border-radius: 6px; cursor: pointer; transition: 0.2s;
-            display: flex; align-items: center; gap: 8px; font-size: 0.85rem;
+        /* Feature Toggles inside Microwave */
+        .feat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; width: 100%; }
+        .feat-btn {
+            background: #333; border: 1px solid #444; color: #ccc;
+            padding: 4px; font-size: 0.7rem; cursor: pointer; text-align: center;
+            border-radius: 3px; display: flex; align-items: center; justify-content: center; gap: 5px;
         }
-        .feature-card:hover { border-color: var(--primary); }
-        .feature-card.active { background: rgba(98, 0, 234, 0.2); border-color: var(--primary); }
-        .feature-card input { margin: 0; }
+        .feat-btn.active { background: rgba(255, 51, 0, 0.3); border-color: var(--mw-led-on); color: white; }
 
-        /* Action Buttons */
-        .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
+        /* Controls */
+        .controls { display: flex; gap: 15px; background: #ccc; padding: 15px; border-radius: 15px; margin-top: 10px; }
+        .led-panel {
+            flex: 1; background: var(--mw-led); border-radius: 8px;
+            border: 3px solid #111; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; position: relative;
+        }
+        .display-text {
+            font-family: 'Courier New', monospace; color: var(--mw-led-on);
+            font-size: 2rem; font-weight: bold; text-shadow: 0 0 8px var(--mw-led-on);
+        }
+        .progress-bar { width: 90%; height: 5px; background: #220000; margin-top: 10px; display: none; border-radius: 2px; }
+        .progress-fill { height: 100%; background: var(--mw-led-on); width: 0%; transition: width 0.1s linear; }
+
+        .keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
         .btn {
-            padding: 12px; border: none; border-radius: 6px; font-weight: bold;
-            cursor: pointer; transition: 0.2s; color: white;
+            border: none; border-radius: 5px; cursor: pointer; font-weight: bold;
+            box-shadow: 0 3px 0 #999; transition: all 0.1s;
         }
-        .btn-preview { background: #444; }
-        .btn-preview:hover { background: #555; }
-        .btn-build { background: var(--primary); grid-column: span 2; font-size: 1.1rem; }
-        .btn-build:hover { background: #7c4dff; }
-        .btn-download { background: #00e676; color: #000; margin-top: 10px; width: 100%; display: none; }
-        .btn-install { background: #ff1744; color: white; margin-top: 10px; width: 100%; display: none; }
+        .btn:active { transform: translateY(3px); box-shadow: none; }
+        .btn-start { grid-column: span 1; background: #4CAF50; color: white; box-shadow: 0 3px 0 #2E7D32; }
+        .btn-clear { grid-column: span 2; background: #f44336; color: white; box-shadow: 0 3px 0 #c62828; }
 
-        /* --- RIGHT PANEL: PREVIEW CONSOLE --- */
+        /* --- 3. PREVIEW CONSOLE (Right Side) --- */
         .preview-console {
-            flex: 1; background: #121212;
-            display: flex; justify-content: center; align-items: center;
-            position: relative; padding: 20px;
-        }
-
-        /* The Phone Simulator */
-        .phone-frame {
-            width: 375px; height: 667px; background: #000; border-radius: 35px;
-            border: 10px solid #333; box-shadow: 0 0 50px rgba(0,0,0,0.8);
+            width: 320px; height: 600px;
+            background: #111; border-radius: 35px;
+            border: 8px solid #333; box-shadow: 0 0 30px rgba(0,0,0,0.8);
             overflow: hidden; position: relative; display: flex; flex-direction: column;
-            transition: transform 0.3s ease;
         }
+        .console-header { height: 30px; background: #000; display: flex; justify-content: center; align-items: center; }
+        .notch { width: 80px; height: 15px; background: #222; border-radius: 0 0 10px 10px; }
         
-        .phone-header { height: 30px; background: #000; display: flex; justify-content: center; align-items: center; }
-        .notch { width: 120px; height: 20px; background: #111; border-radius: 0 0 15px 15px; }
-        
-        .app-screen { flex: 1; background: white; overflow-y: auto; position: relative; }
-        .app-overlay {
+        .app-screen { flex: 1; background: #fff; overflow-y: auto; position: relative; }
+        .console-placeholder {
+            height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center;
+            color: #555; text-align: center; padding: 20px;
+        }
+
+        /* Download Actions inside Preview */
+        .console-actions {
+            position: absolute; bottom: 0; left: 0; width: 100%; background: #111;
+            padding: 10px; display: flex; gap: 10px; display: none;
+        }
+        .dl-btn {
+            flex: 1; border: none; padding: 10px; border-radius: 5px;
+            font-weight: bold; cursor: pointer;
+        }
+        .dl-zip { background: #2196F3; color: white; }
+        .dl-inst { background: #4CAF50; color: white; }
+
+        /* Done Overlay inside Microwave */
+        .done-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.9); color: white;
+            background: rgba(0,0,0,0.9); z-index: 20;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
-            z-index: 20; display: none;
-        }
-        
-        .loading-ring {
-            width: 50px; height: 50px; border: 4px solid rgba(255,255,255,0.3);
-            border-top: 4px solid var(--primary); border-radius: 50%;
-            animation: spin 1s linear infinite; margin-bottom: 20px;
+            display: none;
         }
 
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        /* Animations */
+        .blink { animation: blinker 0.5s linear infinite; }
+        @keyframes blinker { 50% { opacity: 0; } }
 
-        /* --- TOGGLES --- */
-        .hidden { display: none !important; }
-        .show { display: flex !important; }
     </style>
 </head>
 <body>
 
-    <!-- LEFT: BUILDER PANEL -->
-    <aside class="builder-panel">
-        <h2>⚙️ App Builder</h2>
-
-        <!-- 1. App Identity -->
-        <div class="section-title">Identity</div>
-        <div class="form-group">
-            <label>App Name</label>
-            <input type="text" id="appName" value="My Awesome App" oninput="updatePreview()">
-        </div>
+    <div class="workspace">
         
-        <!-- 2. Custom Code Input -->
-        <div class="section-title">Custom Code (Index.html)</div>
-        <div class="form-group">
-            <label>Paste Custom HTML/CSS Snippet</label>
-            <textarea id="customCode" placeholder="<div class='banner'>Sale!</div>..." oninput="updatePreview()"></textarea>
-        </div>
-
-        <!-- 3. Features List -->
-        <div class="section-title">App Features</div>
-        <div class="feature-grid">
-            <div class="feature-card" onclick="toggleFeature(this, 'camera')">
-                <input type="checkbox" id="feat-camera"> 📷 Camera
-            </div>
-            <div class="feature-card" onclick="toggleFeature(this, 'gps')">
-                <input type="checkbox" id="feat-gps"> 📍 GPS/Maps
-            </div>
-            <div class="feature-card" onclick="toggleFeature(this, 'dark')">
-                <input type="checkbox" id="feat-dark"> 🌙 Dark Mode
-            </div>
-            <div class="feature-card" onclick="toggleFeature(this, 'offline')">
-                <input type="checkbox" id="feat-offline" checked> 💾 Offline PWA
-            </div>
-            <div class="feature-card" onclick="toggleFeature(this, 'share')">
-                <input type="checkbox" id="feat-share"> 🔗 Share Button
-            </div>
-            <div class="feature-card" onclick="toggleFeature(this, 'push')">
-                <input type="checkbox" id="feat-push"> 🔔 Notifications
-            </div>
-        </div>
-
-        <!-- 4. Themes -->
-        <div class="section-title">Theme</div>
-        <div class="form-group">
-            <label>Primary Color</label>
-            <input type="color" id="themeColor" value="#6200ea" oninput="updatePreview()">
-        </div>
-        <div class="form-group">
-            <label>Font Style</label>
-            <select id="themeFont" onchange="updatePreview()">
-                <option value="sans-serif">Modern Sans</option>
-                <option value="serif">Classic Serif</option>
-                <option value="monospace">Tech Code</option>
-            </select>
-        </div>
-
-        <!-- 5. UI Controls -->
-        <div class="section-title">UI Controls</div>
-        <div class="form-group">
-            <label>Navigation Style</label>
-            <select id="navStyle" onchange="updatePreview()">
-                <option value="bottom">Bottom Tab Bar</option>
-                <option value="top">Top Header Menu</option>
-                <option value="floating">Floating Action Button</option>
-            </select>
-        </div>
-
-        <!-- 7. Output Suggestion -->
-        <div class="section-title">Output</div>
-        <div class="form-group">
-            <label>Filename</label>
-            <input type="text" id="fileName" value="my-app-v1">
-        </div>
-
-        <!-- ACTIONS -->
-        <div class="btn-group">
-            <button class="btn btn-preview" onclick="toggleConsole()">📱 Switch to Preview Console</button>
-            <button class="btn btn-build" onclick="buildApp()">🔥 BUILD APP</button>
+        <!-- === MICROWAVE (Builder) === -->
+        <div class="microwave-container">
+            <div class="brand">App-Matic 3000</div>
             
-            <!-- Hidden until built -->
-            <button class="btn btn-download" id="dlBtn" onclick="downloadApp()">📥 Download Source (.zip)</button>
-            <button class="btn btn-install" id="installBtn" onclick="simulateInstall()">🚀 Install Now</button>
-        </div>
-    </aside>
+            <div class="door-frame">
+                <div class="window" id="mw-window">
+                    <div class="plate">
+                        <div class="plate-content" id="plate-icon">📄</div>
+                    </div>
 
-    <!-- RIGHT: PREVIEW CONSOLE -->
-    <main class="preview-console" id="console-area">
-        <div class="phone-frame" id="phone-frame">
-            <div class="phone-header">
+                    <!-- CONFIGURATION OVERLAY (Ingredients) -->
+                    <div class="input-overlay" id="config-overlay">
+                        <div class="section-title">App Name & Icon</div>
+                        <div class="form-row">
+                            <input type="text" id="cfg-name" value="SuperApp" placeholder="Name">
+                        </div>
+                        <div class="form-row" style="display:flex; gap:5px;">
+                            <select id="cfg-icon" style="width:50%">
+                                <option value="🚀">🚀</option>
+                                <option value="🎮">🎮</option>
+                                <option value="📝">📝</option>
+                                <option value="🍔">🍔</option>
+                            </select>
+                            <input type="color" id="cfg-color" value="#6200ea" style="width:50%">
+                        </div>
+
+                        <div class="section-title">Custom Code (Index.html)</div>
+                        <div class="form-row">
+                            <textarea id="cfg-custom" placeholder="Paste HTML snippets here..."></textarea>
+                        </div>
+
+                        <div class="section-title">Features</div>
+                        <div class="feat-grid">
+                            <div class="feat-btn" onclick="toggleFeat(this, 'dark')">🌙 Dark Mode</div>
+                            <div class="feat-btn" onclick="toggleFeat(this, 'camera')">📷 Camera</div>
+                            <div class="feat-btn" onclick="toggleFeat(this, 'gps')">📍 GPS</div>
+                            <div class="feat-btn" onclick="toggleFeat(this, 'pwa')">💾 PWA</div>
+                        </div>
+
+                        <div class="section-title">UI Controls</div>
+                        <div class="form-row">
+                            <select id="cfg-ui">
+                                <option value="bottom">Bottom Tab Bar</option>
+                                <option value="top">Top Header</option>
+                                <option value="float">Floating Button</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- FINISHED MESSAGE -->
+                    <div class="done-overlay" id="done-overlay">
+                        <h1 style="color:#4CAF50; margin:0;">DONE!</h1>
+                        <p style="color:#aaa;">Check Preview Console</p>
+                        <button class="btn" style="background:#333; color:white; margin-top:10px;" onclick="resetMW()">Cook Another</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CONTROLS -->
+            <div class="controls">
+                <div class="led-panel">
+                    <div class="display-text" id="display">00:00</div>
+                    <div class="progress-bar" id="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+                </div>
+                <div class="keypad">
+                    <button class="btn" onclick="addTime(10)">10</button>
+                    <button class="btn" onclick="addTime(30)">30</button>
+                    <button class="btn" onclick="addTime(60)">60</button>
+                    <button class="btn btn-clear" onclick="resetMW()">Cancel</button>
+                    <button class="btn btn-start" onclick="startCooking()">START</button>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- === PREVIEW CONSOLE (Result) === -->
+        <div class="preview-console">
+            <div class="console-header">
                 <div class="notch"></div>
             </div>
             
-            <div class="app-screen" id="app-screen">
-                <!-- App Content Injected Here -->
-                <div style="padding:20px; text-align:center; color:#ccc;">
-                    <h1>Preview Console</h1>
-                    <p>Click "Build App" to see your app here.</p>
+            <div class="app-screen" id="preview-screen">
+                <div class="console-placeholder">
+                    <span style="font-size:3rem;">📱</span>
+                    <p>Preview Console</p>
+                    <small>Set ingredients in microwave & press START</small>
                 </div>
             </div>
 
-            <!-- Installation Simulator Overlay -->
-            <div class="app-overlay" id="install-overlay">
-                <div class="loading-ring"></div>
-                <h3 id="install-status">Installing...</h3>
+            <div class="console-actions" id="console-actions">
+                <button class="dl-btn dl-zip" onclick="downloadZip()">📥 Download</button>
+                <button class="dl-btn dl-inst" onclick="simInstall()">🚀 Install</button>
             </div>
         </div>
-    </main>
+
+    </div>
 
     <script>
-        // State
-        let isBuilt = false;
-        let generatedAppCode = "";
-        let generatedManifest = "";
+        // --- LOGIC ---
+        let timeLeft = 0;
+        let totalTime = 0;
+        let timer = null;
+        let isCooking = false;
+        let features = {};
 
-        // Toggle UI Checkbox Logic
-        function toggleFeature(card, id) {
-            const checkbox = card.querySelector('input');
-            checkbox.checked = !checkbox.checked;
-            if(checkbox.checked) card.classList.add('active');
-            else card.classList.remove('active');
-            updatePreview();
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        function beep(freq=800, dur=0.1) {
+            if(audioCtx.state==='suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.frequency.value = freq;
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.start(); gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime+dur);
+            osc.stop(audioCtx.currentTime+dur);
         }
 
-        // 6. Toggle Console Visibility
-        function toggleConsole() {
-            const consoleArea = document.getElementById('console-area');
-            consoleArea.classList.toggle('hidden');
+        function toggleFeat(el, key) {
+            el.classList.toggle('active');
+            features[key] = el.classList.contains('active');
         }
 
-        // Generate Preview Code
-        function updatePreview() {
-            if (!isBuilt) return; // Only update if we have built it initially
-            
-            // Simple DOM update for preview speed
-            const screen = document.getElementById('app-screen');
-            const config = getConfig();
-            
-            let html = `
-                <style>
-                    body { font-family: ${config.font}; background: ${config.dark ? '#121212' : '#f4f4f9'}; color: ${config.dark ? '#eee' : '#333'}; margin:0; padding-bottom: 60px; }
-                    .header { background: ${config.color}; color: white; padding: 20px; text-align: center; }
-                    .card { background: ${config.dark ? '#1e1e1e' : 'white'}; margin: 15px; padding: 15px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-                    .fab { position: absolute; bottom: 20px; right: 20px; width: 60px; height: 60px; background: ${config.color}; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 24px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
-                    .nav { position: fixed; bottom: 0; left: 0; width: 100%; height: 60px; background: ${config.dark ? '#333' : 'white'}; display: flex; justify-content: space-around; align-items: center; border-top: 1px solid #ddd; }
-                </style>
-                <div class="header"><h1>${config.name}</h1></div>
-                
-                ${config.custom ? `<div class="card">${config.custom}</div>` : ''}
-                
-                <div class="card">
-                    <h3>Features Active:</h3>
-                    <ul>${config.features.join('<br>')}</ul>
-                </div>
-
-                <div class="card">
-                    <p>Generated App Preview.</p>
-                </div>
-            `;
-
-            if(config.nav === 'floating') html += `<div class="fab">+</div>`;
-            if(config.nav === 'bottom') html += `<div class="nav"><span>🏠</span><span>🔍</span><span>⚙️</span></div>`;
-
-            screen.innerHTML = html;
+        function addTime(s) { if(!isCooking) { timeLeft+=s; totalTime=timeLeft; updateDisp(); beep(600,0.05); } }
+        function updateDisp() {
+            const m = Math.floor(timeLeft/60).toString().padStart(2,'0');
+            const s = (timeLeft%60).toString().padStart(2,'0');
+            document.getElementById('display').innerText = `${m}:${s}`;
         }
 
-        function getConfig() {
-            const features = [];
-            if(document.getElementById('feat-camera').checked) features.push("📷 Camera Access");
-            if(document.getElementById('feat-gps').checked) features.push("📍 Geolocation");
-            if(document.getElementById('feat-dark').checked) features.push("🌙 Dark Mode");
-            if(document.getElementById('feat-offline').checked) features.push("💾 Offline Capable");
-            
-            return {
-                name: document.getElementById('appName').value,
-                color: document.getElementById('themeColor').value,
-                font: document.getElementById('themeFont').value,
-                nav: document.getElementById('navStyle').value,
-                custom: document.getElementById('customCode').value,
-                features: features,
-                dark: document.getElementById('feat-dark').checked
-            };
+        function resetMW() {
+            clearInterval(timer);
+            isCooking=false; timeLeft=0; totalTime=0;
+            document.getElementById('config-overlay').style.display='flex';
+            document.getElementById('done-overlay').style.display='none';
+            document.getElementById('mw-window').classList.remove('lit');
+            document.getElementById('plate-icon').classList.remove('spinning');
+            document.getElementById('progress-bar').style.display='none';
+            updateDisp();
         }
 
-        // THE BUILD PROCESS
-        function buildApp() {
-            const config = getConfig();
-            const status = document.getElementById('install-status');
-            const overlay = document.getElementById('install-overlay');
-            
-            // Show "Building" animation
-            overlay.style.display = 'flex';
-            status.innerText = "Compiling Source...";
-            
-            setTimeout(() => {
-                status.innerText = "Optimizing Assets...";
+        function startCooking() {
+            if(isCooking || timeLeft<=0) return;
+            isCooking=true;
+            document.getElementById('config-overlay').style.display='none';
+            document.getElementById('mw-window').classList.add('lit');
+            document.getElementById('plate-icon').innerText = document.getElementById('cfg-icon').value;
+            document.getElementById('plate-icon').classList.add('spinning');
+            document.getElementById('progress-bar').style.display='block';
+            beep(1000,0.2);
+
+            timer=setInterval(()=>{
+                timeLeft--;
+                updateDisp();
+                const pct = ((totalTime-timeLeft)/totalTime)*100;
+                document.getElementById('progress-fill').style.width = pct+'%';
+                if(timeLeft<=0) finishCooking();
             }, 1000);
-
-            setTimeout(() => {
-                overlay.style.display = 'none';
-                isBuilt = true;
-                document.getElementById('dlBtn').style.display = 'block';
-                document.getElementById('installBtn').style.display = 'block';
-                
-                // Generate Real Code
-                generateRealSource(config);
-                updatePreview();
-                
-                alert("Build Successful! Check Preview Console.");
-            }, 2000);
         }
 
-        function generateRealSource(cfg) {
-            // Create the full HTML string
-            const bodyContent = cfg.custom ? `<div class="custom-section">${cfg.custom}</div>` : '';
-            
-            generatedAppCode = `<!DOCTYPE html>
+        function finishCooking() {
+            clearInterval(timer);
+            isCooking=false;
+            document.getElementById('mw-window').classList.remove('lit');
+            document.getElementById('plate-icon').classList.remove('spinning');
+            document.getElementById('done-overlay').style.display='flex';
+            document.getElementById('console-actions').style.display='flex';
+            beep(600,0.5); setTimeout(()=>beep(800,0.5), 400);
+            generateApp();
+        }
+
+        // --- APP GENERATION ---
+        function generateApp() {
+            const name = document.getElementById('cfg-name').value;
+            const color = document.getElementById('cfg-color').value;
+            const custom = document.getElementById('cfg-custom').value;
+            const ui = document.getElementById('cfg-ui').value;
+            const dark = features.dark;
+            const pwa = features.pwa;
+
+            let html = `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${cfg.name}</title>
-    <link rel="manifest" href="manifest.json">
+    <title>${name}</title>
+    ${pwa?'<link rel="manifest" href="manifest.json">':''}
     <style>
-        body { font-family: ${cfg.font}; background: ${cfg.dark ? '#121212' : '#f4f4f9'}; color: ${cfg.dark ? '#eee' : '#333'}; margin:0; padding: 20px; padding-bottom: 80px; }
-        .header { background: ${cfg.color}; color: white; padding: 20px; margin: -20px -20px 20px -20px; text-align: center; border-bottom-left-radius: 15px; border-bottom-right-radius: 15px; }
-        .card { background: ${cfg.dark ? '#1e1e1e' : 'white'}; padding: 15px; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .nav { position: fixed; bottom: 0; left: 0; width: 100%; height: 60px; background: ${cfg.dark ? '#333' : 'white'}; display: flex; justify-content: space-around; align-items: center; border-top: 1px solid #ddd; }
-        .fab { position: fixed; bottom: 20px; right: 20px; width: 60px; height: 60px; background: ${cfg.color}; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 24px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); cursor: pointer; }
-        button { background: ${cfg.color}; color: white; border: none; padding: 10px 20px; border-radius: 5px; }
+        body { font-family: sans-serif; background: ${dark?'#121212':'#f4f4f9'}; color: ${dark?'#eee':'#333'}; margin:0; padding: 20px; padding-bottom: ${ui==='bottom'?'70px':'20px'}; }
+        header { background: ${color}; color: white; padding: 20px; border-radius: 15px; margin-bottom: 20px; }
+        .card { background: ${dark?'#1e1e1e':'white'}; padding: 15px; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .nav { position: fixed; bottom:0; left:0; width:100%; height:60px; background: ${dark?'#333':'white'}; display: flex; justify-content: space-around; align-items: center; border-top:1px solid #ddd; }
+        .fab { position: fixed; bottom:20px; right:20px; width:60px; height:60px; background:${color}; border-radius:50%; color:white; display:flex; justify-content:center; align-items:center; font-size:24px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
     </style>
 </head>
 <body>
-    <div class="header"><h1>${cfg.name}</h1></div>
-    ${bodyContent}
-    <div class="card">
-        <h3>Welcome to your App!</h3>
-        <p>This app was generated by App-Matic 3000.</p>
-        ${cfg.features.includes('📍 Geolocation') ? '<button onclick="alert(\'GPS feature enabled\')">Get Location</button>' : ''}
-    </div>
+    <header><h1>${name}</h1></header>
+    ${custom ? `<div>${custom}</div>` : ''}
+    <div class="card"><h3>Welcome</h3><p>Your app is ready.</p></div>
     
-    ${cfg.nav === 'bottom' ? '<div class="nav"><span>Home</span><span>Menu</span></div>' : ''}
-    ${cfg.nav === 'floating' ? '<div class="fab">+</div>' : ''}
-    
-    <script>
-        console.log('App Loaded');
-        if ('serviceWorker' in navigator && ${document.getElementById('feat-offline').checked}) {
-            // Service Worker registration code would go here
-        }
-    <\/script>
+    ${ui==='bottom'?'<div class="nav"><span>🏠</span><span>⚙️</span></div>':''}
+    ${ui==='float'?'<div class="fab">+</div>':''}
 </body>
 </html>`;
 
-            // Manifest
-            generatedManifest = JSON.stringify({
-                name: cfg.name,
-                short_name: cfg.name,
-                start_url: "./index.html",
-                display: "standalone",
-                background_color: cfg.dark ? "#121212" : "#ffffff",
-                theme_color: cfg.color,
-                icons: [{"src": "https://via.placeholder.com/192", "sizes": "192x192", "type": "image/png"}]
+            // Preview Update
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const previewBody = doc.querySelector('body').innerHTML;
+            const previewStyle = doc.querySelector('style').textContent;
+            
+            const screen = document.getElementById('preview-screen');
+            screen.innerHTML = `<style>${previewStyle}</style>${previewBody}`;
+
+            // Store for download
+            window.generatedHTML = html;
+            window.generatedManifest = JSON.stringify({
+                name: name, short_name: name, start_url: "./index.html",
+                display: "standalone", background_color: dark?"#121212":"#ffffff",
+                theme_color: color,
+                icons: [{"src":"https://via.placeholder.com/192","sizes":"192x192","type":"image/png"}]
             });
         }
 
-        // 8. Download
-        async function downloadApp() {
+        async function downloadZip() {
             const zip = new JSZip();
-            zip.file("index.html", generatedAppCode);
-            if(document.getElementById('feat-offline').checked) {
-                zip.file("manifest.json", generatedManifest);
-            }
-            
+            zip.file("index.html", window.generatedHTML);
+            if(features.pwa) zip.file("manifest.json", window.generatedManifest);
             const content = await zip.generateAsync({type:"blob"});
-            const name = document.getElementById('fileName').value || "app";
-            saveAs(content, name + ".zip");
+            saveAs(content, document.getElementById('cfg-name').value+".zip");
         }
 
-        // 9. Install Simulation
-        function simulateInstall() {
-            const status = document.getElementById('install-status');
-            const overlay = document.getElementById('install-overlay');
-            overlay.style.display = 'flex';
-            
-            status.innerText = "Installing App to Device...";
-            
-            setTimeout(() => {
-                status.innerText = "Adding to Home Screen...";
-            }, 1500);
-            
-            setTimeout(() => {
-                status.innerText = "Done!";
-                status.style.color = "#00e676";
-                setTimeout(() => {
-                    overlay.style.display = 'none';
-                    status.style.color = "white";
-                    alert("App 'Installed' (Simulated). On a real device, this would place an icon on your home screen.");
-                }, 1000);
-            }, 3000);
+        function simInstall() {
+            alert("Simulating Install... \n\nOn a real device with a valid manifest.json, this would add the app to your home screen.");
         }
-
-        // Init
-        updatePreview();
     </script>
 </body>
 </html>
